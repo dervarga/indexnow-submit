@@ -79,7 +79,7 @@ Keeps the last submitted sitemap in the GitHub Actions cache and sends only URLs
 
 GitHub evicts caches unused for 7 days. When that happens the next run sends the whole sitemap once, which is harmless. A schedule that runs at least twice a week keeps the cache alive.
 
-The cache can only be saved by runs on the default branch that GitHub allows to write it: `schedule`, `workflow_dispatch` and `push` work. Runs started by another app's event (`check_run` from Cloudflare, `deployment_status` from Vercel) get a read-only cache, so the state is never saved. The Cloudflare example works around this by restarting itself with `workflow_dispatch`.
+The cache can only be saved by runs on the default branch that GitHub allows to write it: `schedule`, `workflow_dispatch` and `push` work. Runs started by another app's event (`check_run` from Cloudflare, `deployment_status` from Vercel) get a read-only cache, so the state is never saved. The Cloudflare and Vercel examples work around this by restarting themselves with `workflow_dispatch`.
 
 ### When to run
 
@@ -87,7 +87,7 @@ Pick the example that matches how the site is hosted and where its content lives
 
 | Example | Trigger | Use for |
 |---|---|---|
-| [`indexnow-on-vercel-deploy.yml`](examples/indexnow-on-vercel-deploy.yml) | Vercel production deployment succeeded | Small sites on Vercel; submits the whole sitemap each deploy |
+| [`indexnow-on-vercel-deploy.yml`](examples/indexnow-on-vercel-deploy.yml) | Vercel production deployment succeeded (relayed through `workflow_dispatch`), plus twice weekly | Sites on Vercel whose content lives in the repo |
 | [`indexnow-on-cloudflare-pages.yml`](examples/indexnow-on-cloudflare-pages.yml) | "Cloudflare Pages" check run succeeded on the default branch (relayed through `workflow_dispatch`), plus twice weekly | Sites on Cloudflare Pages whose content lives in the repo |
 | [`indexnow-scheduled.yml`](examples/indexnow-scheduled.yml) | Every 6 hours | Sites whose content changes without a deploy (database-driven) |
 
@@ -109,4 +109,4 @@ Bump `version` in `package.json`, then tag and push:
 git tag -a v1.2.0 -m v1.2.0 && git push origin main v1.2.0
 ```
 
-Site workflows pin an exact tag (`@v1.2.0`); update them to pick up a release. The moving `v1` tag still points at 1.0.0 (drainfix uses it); move it with `git tag -fa v1 -m v1 && git push -f origin v1` if you want `@v1` to follow the latest release.
+Site workflows pin an exact tag (`@v1.2.0`); update them to pick up a release. The moving `v1` tag still points at 1.0.0; move it with `git tag -fa v1 -m v1 && git push -f origin v1` if you want `@v1` to follow the latest release.

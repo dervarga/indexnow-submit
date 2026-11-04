@@ -1,19 +1,44 @@
-# Copy to .github/workflows/indexnow.yml in a site's repo.
-# Runs after every successful Vercel production deployment and submits the
-# site's sitemap URLs to IndexNow. Store the key as a repo secret INDEXNOW_KEY
-# (or paste it inline; the key is public anyway, it sits in the key file).
+# Copy to .github/workflows/indexnow.yml in a site's repo (Vercel with the
+# GitHub integration). Submits new and changed sitemap URLs after each
+# successful Vercel production deployment. Store the key as a repo secret
+# INDEXNOW_KEY.
+#
+# Runs started by Vercel's deployment_status event can't write the Actions
+# cache, so `relay` only restarts this workflow via workflow_dispatch and
+# `submit` does the work there. The twice-weekly schedule keeps the state
+# cache alive (GitHub evicts caches unused for 7 days).
 name: IndexNow
 
-on: deployment_status
+on:
+  deployment_status:
+  schedule:
+    - cron: '41 5 * * 1,4'
+  workflow_dispatch:
 
 jobs:
-  submit:
+  relay:
     if: >-
+      github.event_name == 'deployment_status' &&
       github.event.deployment_status.state == 'success' &&
       startsWith(github.event.deployment.environment, 'Production')
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
-      - uses: dervarga/indexnow-submit@v1
+      - run: gh workflow run indexnow.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+  submit:
+    if: github.event_name != 'deployment_status'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: indexnow
+      cancel-in-progress: false
+    steps:
+      - uses: dervarga/indexnow-submit@v1.2.0
         with:
           site: https://www.example.org
           key: ${{ secrets.INDEXNOW_KEY }}
+          state: true
