@@ -36,8 +36,12 @@ export function parseSitemap(xml) {
     const m = block.match(new RegExp(`<(?:\\w+:)?${name}>([\\s\\S]*?)</(?:\\w+:)?${name}>`, 'i'))
     return m ? decodeXml(m[1]) : undefined
   }
+  // Image/video/news/xhtml extensions carry their own <*:loc>; drop them so
+  // only the page's own <loc> and <lastmod> are read.
+  const extRe = /<(\w+):(image|video|news)\b[\s\S]*?<\/\1:\2>|<\w+:link\b[^>]*\/?>/gi
   const entries = []
-  for (const [, block] of xml.matchAll(blockRe)) {
+  for (const [, rawBlock] of xml.matchAll(blockRe)) {
+    const block = rawBlock.replace(extRe, '')
     const loc = field(block, 'loc')
     if (!loc) continue
     const lastmod = field(block, 'lastmod')

@@ -58,6 +58,15 @@ describe('parseSitemap', () => {
       ],
     })
   })
+  it('ignores image, video and alternate-link locations', () => {
+    const xml = `<urlset><url>
+      <image:image><image:loc>https://x.org/img.jpg</image:loc></image:image>
+      <xhtml:link rel="alternate" hreflang="hu" href="https://x.org/hu/"/>
+      <video:video><video:content_loc>https://x.org/v.mp4</video:content_loc><video:loc>https://x.org/v</video:loc></video:video>
+      <loc>https://x.org/page/</loc><lastmod>2026-01-01</lastmod>
+    </url></urlset>`
+    assert.deepEqual(parseSitemap(xml).entries, [{ loc: 'https://x.org/page/', lastmod: '2026-01-01' }])
+  })
   it('handles namespace prefixes', () => {
     const xml = '<ns:urlset><ns:url><ns:loc>https://x.org/</ns:loc></ns:url></ns:urlset>'
     assert.deepEqual(parseSitemap(xml).entries, [{ loc: 'https://x.org/' }])

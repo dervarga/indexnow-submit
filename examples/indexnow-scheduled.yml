@@ -1,0 +1,24 @@
+# Copy to .github/workflows/indexnow.yml for sites whose content changes
+# without a deploy (e.g. pages built from a database). Every 6 hours, submits
+# sitemap URLs that are new or whose <lastmod> changed since the last run.
+# The sitemap must have accurate <lastmod> values for edits to be detected.
+name: IndexNow
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: indexnow
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dervarga/indexnow-submit@v1.1.0
+        with:
+          site: https://www.example.org
+          key: ${{ secrets.INDEXNOW_KEY }}
+          state: true

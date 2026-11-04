@@ -63,26 +63,35 @@ Exit code is 1 if any site fails.
 
 ## GitHub Action
 
-Submit after every successful Vercel production deploy. Copy [`examples/indexnow-on-vercel-deploy.yml`](examples/indexnow-on-vercel-deploy.yml) to `.github/workflows/indexnow.yml` in the site's repo:
-
 ```yaml
-on: deployment_status
-jobs:
-  submit:
-    if: >-
-      github.event.deployment_status.state == 'success' &&
-      startsWith(github.event.deployment.environment, 'Production')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: dervarga/indexnow-submit@v1
-        with:
-          site: https://www.example.org
-          key: ${{ secrets.INDEXNOW_KEY }}
+- uses: dervarga/indexnow-submit@v1.1.0
+  with:
+    site: https://www.example.org
+    key: ${{ secrets.INDEXNOW_KEY }}
+    state: true   # optional: only send new/changed URLs
 ```
 
-Inputs: `site`, `key`, `config`, `sitemap`, `dry-run`, `args` (extra CLI flags).
+Inputs: `site`, `key`, `config`, `sitemap`, `state`, `dry-run`, `args` (extra CLI flags).
 
-This submits the whole sitemap on each production deploy, which is fine for small sites. For large sites, run the CLI with `--state` somewhere the state file persists.
+### `state: true`
+
+Keeps the last submitted sitemap in the GitHub Actions cache and sends only URLs that are new or whose `<lastmod>` changed. The first run sends everything. Needs accurate `<lastmod>` values; without them only new URLs are detected.
+
+GitHub evicts caches unused for 7 days. When that happens the next run sends the whole sitemap once, which is harmless. A schedule that runs at least twice a week keeps the cache alive.
+
+Caches are per branch, so use triggers that run on the default branch (`schedule`, `workflow_dispatch`, `check_run`). Don't combine `state: true` with `deployment_status`.
+
+### When to run
+
+Pick the example that matches how the site is hosted and where its content lives, and copy it to `.github/workflows/indexnow.yml`:
+
+| Example | Trigger | Use for |
+|---|---|---|
+| [`indexnow-on-vercel-deploy.yml`](examples/indexnow-on-vercel-deploy.yml) | Vercel production deployment succeeded | Small sites on Vercel; submits the whole sitemap each deploy |
+| [`indexnow-on-cloudflare-pages.yml`](examples/indexnow-on-cloudflare-pages.yml) | "Cloudflare Pages" check run succeeded on the default branch, plus twice weekly | Sites on Cloudflare Pages whose content lives in the repo |
+| [`indexnow-scheduled.yml`](examples/indexnow-scheduled.yml) | Every 6 hours | Sites whose content changes without a deploy (database-driven) |
+
+Private repos: each run bills at least 1 Actions minute, and the free tier is 2,000 minutes a month across all private repos. Every 6 hours is about 120 minutes a month; hourly is about 720.
 
 If this repo is private, allow other repos to use it: **Settings → Actions → General → Access → Accessible from repositories owned by the user**.
 

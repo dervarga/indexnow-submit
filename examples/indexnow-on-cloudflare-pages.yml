@@ -1,0 +1,34 @@
+# Copy to .github/workflows/indexnow.yml in a site's repo (Cloudflare Pages
+# with the GitHub integration). Cloudflare Pages doesn't create GitHub
+# deployments, but it posts a "Cloudflare Pages" check run when a deploy
+# finishes. This submits new/changed sitemap URLs after each successful
+# production deploy. The twice-weekly schedule keeps the state cache alive
+# (GitHub evicts caches unused for 7 days) and catches anything missed.
+name: IndexNow
+
+on:
+  check_run:
+    types: [completed]
+  schedule:
+    - cron: '17 5 * * 1,4'
+  workflow_dispatch:
+
+concurrency:
+  group: indexnow
+  cancel-in-progress: false
+
+jobs:
+  submit:
+    if: >-
+      github.event_name != 'check_run' || (
+        github.event.check_run.app.slug == 'cloudflare-workers-and-pages' &&
+        github.event.check_run.conclusion == 'success' &&
+        github.event.check_run.check_suite.head_branch == github.event.repository.default_branch
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dervarga/indexnow-submit@v1.1.0
+        with:
+          site: https://www.example.org
+          key: ${{ secrets.INDEXNOW_KEY }}
+          state: true

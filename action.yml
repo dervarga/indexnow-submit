@@ -18,6 +18,12 @@ inputs:
   sitemap:
     description: Sitemap URL (default auto-discovered from robots.txt)
     required: false
+  state:
+    description: >-
+      Remember submitted URLs between runs (GitHub Actions cache) and only send
+      new URLs or URLs whose <lastmod> changed. The first run sends everything.
+    required: false
+    default: 'false'
   dry-run:
     description: Show what would be submitted without sending anything
     required: false
@@ -29,12 +35,30 @@ inputs:
 runs:
   using: composite
   steps:
+    - id: prep
+      if: inputs.state == 'true'
+      shell: bash
+      env:
+        IN_SCOPE: ${{ inputs.site || inputs.config }}
+      run: |
+        scope=$(printf '%s' "$IN_SCOPE" | sed -E 's#^https?://##; s#[^A-Za-z0-9._-]+#_#g; s#_+$##')
+        echo "prefix=indexnow-state-${scope}-" >> "$GITHUB_OUTPUT"
+        echo "file=$GITHUB_WORKSPACE/.indexnow-state.json" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.state == 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.prep.outputs.file }}
+        key: ${{ steps.prep.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: ${{ steps.prep.outputs.prefix }}
+
     - shell: bash
       env:
         INDEXNOW_KEY: ${{ inputs.key }}
         IN_SITE: ${{ inputs.site }}
         IN_CONFIG: ${{ inputs.config }}
         IN_SITEMAP: ${{ inputs.sitemap }}
+        IN_STATE_FILE: ${{ steps.prep.outputs.file }}
         IN_DRY_RUN: ${{ inputs.dry-run }}
         IN_ARGS: ${{ inputs.args }}
       run: |
@@ -42,7 +66,16 @@ runs:
         [ -n "$IN_SITE" ] && args+=("$IN_SITE")
         [ -n "$IN_CONFIG" ] && args+=(--config "$IN_CONFIG")
         [ -n "$IN_SITEMAP" ] && args+=(--sitemap "$IN_SITEMAP")
+        [ -n "$IN_STATE_FILE" ] && args+=(--state "$IN_STATE_FILE")
         [ "$IN_DRY_RUN" = "true" ] && args+=(--dry-run)
         # shellcheck disable=SC2206
         [ -n "$IN_ARGS" ] && args+=($IN_ARGS)
         node "$GITHUB_ACTION_PATH/src/cli.mjs" "${args[@]}"
+
+    # Saved even when a site failed: the CLI only records successfully
+    # submitted sites, so failed ones are retried on the next run.
+    - if: always() && inputs.state == 'true' && hashFiles('.indexnow-state.json') != ''
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ steps.prep.outputs.file }}
+        key: ${{ steps.prep.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
