@@ -17,7 +17,7 @@ jobs:
   submit:
     runs-on: ubuntu-latest
     steps:
-      - uses: dervarga/indexnow-submit@v1.1.0
+      - uses: dervarga/indexnow-submit@v1.2.0
         with:
           site: https://www.example.org
           key: ${{ secrets.INDEXNOW_KEY }}

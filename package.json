@@ -1,6 +1,6 @@
 {
   "name": "indexnow-submit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Submit a site's sitemap URLs to IndexNow from the CLI or a GitHub Action",
   "type": "module",
   "bin": {

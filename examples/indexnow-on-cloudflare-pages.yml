@@ -1,9 +1,12 @@
 # Copy to .github/workflows/indexnow.yml in a site's repo (Cloudflare Pages
 # with the GitHub integration). Cloudflare Pages doesn't create GitHub
 # deployments, but it posts a "Cloudflare Pages" check run when a deploy
-# finishes. This submits new/changed sitemap URLs after each successful
-# production deploy. The twice-weekly schedule keeps the state cache alive
-# (GitHub evicts caches unused for 7 days) and catches anything missed.
+# finishes.
+#
+# Runs started by another app's check run can't write the Actions cache, so
+# the `relay` job only starts this workflow again via workflow_dispatch, and
+# the `submit` job does the work there. The twice-weekly schedule keeps the
+# state cache alive (GitHub evicts caches unused for 7 days).
 name: IndexNow
 
 on:
@@ -13,21 +16,30 @@ on:
     - cron: '17 5 * * 1,4'
   workflow_dispatch:
 
-concurrency:
-  group: indexnow
-  cancel-in-progress: false
-
 jobs:
-  submit:
+  relay:
     if: >-
-      github.event_name != 'check_run' || (
-        github.event.check_run.app.slug == 'cloudflare-workers-and-pages' &&
-        github.event.check_run.conclusion == 'success' &&
-        github.event.check_run.check_suite.head_branch == github.event.repository.default_branch
-      )
+      github.event_name == 'check_run' &&
+      github.event.check_run.app.slug == 'cloudflare-workers-and-pages' &&
+      github.event.check_run.conclusion == 'success' &&
+      github.event.check_run.check_suite.head_branch == github.event.repository.default_branch
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
-      - uses: dervarga/indexnow-submit@v1.1.0
+      - run: gh workflow run indexnow.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+  submit:
+    if: github.event_name != 'check_run'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: indexnow
+      cancel-in-progress: false
+    steps:
+      - uses: dervarga/indexnow-submit@v1.2.0
         with:
           site: https://www.example.org
           key: ${{ secrets.INDEXNOW_KEY }}

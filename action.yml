@@ -46,7 +46,7 @@ runs:
         echo "file=$GITHUB_WORKSPACE/.indexnow-state.json" >> "$GITHUB_OUTPUT"
 
     - if: inputs.state == 'true'
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: ${{ steps.prep.outputs.file }}
         key: ${{ steps.prep.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
@@ -75,7 +75,7 @@ runs:
     # Saved even when a site failed: the CLI only records successfully
     # submitted sites, so failed ones are retried on the next run.
     - if: always() && inputs.state == 'true' && hashFiles('.indexnow-state.json') != ''
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: ${{ steps.prep.outputs.file }}
         key: ${{ steps.prep.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}

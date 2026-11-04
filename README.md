@@ -64,7 +64,7 @@ Exit code is 1 if any site fails.
 ## GitHub Action
 
 ```yaml
-- uses: dervarga/indexnow-submit@v1.1.0
+- uses: dervarga/indexnow-submit@v1.2.0
   with:
     site: https://www.example.org
     key: ${{ secrets.INDEXNOW_KEY }}
@@ -79,7 +79,7 @@ Keeps the last submitted sitemap in the GitHub Actions cache and sends only URLs
 
 GitHub evicts caches unused for 7 days. When that happens the next run sends the whole sitemap once, which is harmless. A schedule that runs at least twice a week keeps the cache alive.
 
-Caches are per branch, so use triggers that run on the default branch (`schedule`, `workflow_dispatch`, `check_run`). Don't combine `state: true` with `deployment_status`.
+The cache can only be saved by runs on the default branch that GitHub allows to write it: `schedule`, `workflow_dispatch` and `push` work. Runs started by another app's event (`check_run` from Cloudflare, `deployment_status` from Vercel) get a read-only cache, so the state is never saved. The Cloudflare example works around this by restarting itself with `workflow_dispatch`.
 
 ### When to run
 
@@ -88,7 +88,7 @@ Pick the example that matches how the site is hosted and where its content lives
 | Example | Trigger | Use for |
 |---|---|---|
 | [`indexnow-on-vercel-deploy.yml`](examples/indexnow-on-vercel-deploy.yml) | Vercel production deployment succeeded | Small sites on Vercel; submits the whole sitemap each deploy |
-| [`indexnow-on-cloudflare-pages.yml`](examples/indexnow-on-cloudflare-pages.yml) | "Cloudflare Pages" check run succeeded on the default branch, plus twice weekly | Sites on Cloudflare Pages whose content lives in the repo |
+| [`indexnow-on-cloudflare-pages.yml`](examples/indexnow-on-cloudflare-pages.yml) | "Cloudflare Pages" check run succeeded on the default branch (relayed through `workflow_dispatch`), plus twice weekly | Sites on Cloudflare Pages whose content lives in the repo |
 | [`indexnow-scheduled.yml`](examples/indexnow-scheduled.yml) | Every 6 hours | Sites whose content changes without a deploy (database-driven) |
 
 Private repos: each run bills at least 1 Actions minute, and the free tier is 2,000 minutes a month across all private repos. Every 6 hours is about 120 minutes a month; hourly is about 720.
@@ -103,8 +103,10 @@ npm test
 
 ## Releasing
 
-Workflows reference `@v1`. After changes, move the tag:
+Bump `version` in `package.json`, then tag and push:
 
 ```sh
-git tag -fa v1 -m v1 && git push -f origin v1
+git tag -a v1.2.0 -m v1.2.0 && git push origin main v1.2.0
 ```
+
+Site workflows pin an exact tag (`@v1.2.0`); update them to pick up a release. The moving `v1` tag still points at 1.0.0 (drainfix uses it); move it with `git tag -fa v1 -m v1 && git push -f origin v1` if you want `@v1` to follow the latest release.
