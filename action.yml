@@ -1,0 +1,48 @@
+name: IndexNow submit
+description: Submit a site's sitemap URLs (or a config file of sites) to IndexNow
+author: Daniel Varga
+branding:
+  icon: send
+  color: blue
+
+inputs:
+  site:
+    description: Site URL, e.g. https://www.example.org (omit when using config)
+    required: false
+  key:
+    description: IndexNow key. Falls back to each site's key in the config file.
+    required: false
+  config:
+    description: Path to a JSON config file listing several sites
+    required: false
+  sitemap:
+    description: Sitemap URL (default auto-discovered from robots.txt)
+    required: false
+  dry-run:
+    description: Show what would be submitted without sending anything
+    required: false
+    default: 'false'
+  args:
+    description: Extra CLI arguments, e.g. "--no-verify-key"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        INDEXNOW_KEY: ${{ inputs.key }}
+        IN_SITE: ${{ inputs.site }}
+        IN_CONFIG: ${{ inputs.config }}
+        IN_SITEMAP: ${{ inputs.sitemap }}
+        IN_DRY_RUN: ${{ inputs.dry-run }}
+        IN_ARGS: ${{ inputs.args }}
+      run: |
+        args=()
+        [ -n "$IN_SITE" ] && args+=("$IN_SITE")
+        [ -n "$IN_CONFIG" ] && args+=(--config "$IN_CONFIG")
+        [ -n "$IN_SITEMAP" ] && args+=(--sitemap "$IN_SITEMAP")
+        [ "$IN_DRY_RUN" = "true" ] && args+=(--dry-run)
+        # shellcheck disable=SC2206
+        [ -n "$IN_ARGS" ] && args+=($IN_ARGS)
+        node "$GITHUB_ACTION_PATH/src/cli.mjs" "${args[@]}"

@@ -1,0 +1,19 @@
+# Copy to .github/workflows/indexnow.yml in a site's repo.
+# Runs after every successful Vercel production deployment and submits the
+# site's sitemap URLs to IndexNow. Store the key as a repo secret INDEXNOW_KEY
+# (or paste it inline; the key is public anyway, it sits in the key file).
+name: IndexNow
+
+on: deployment_status
+
+jobs:
+  submit:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      startsWith(github.event.deployment.environment, 'Production')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dervarga/indexnow-submit@v1
+        with:
+          site: https://www.example.org
+          key: ${{ secrets.INDEXNOW_KEY }}

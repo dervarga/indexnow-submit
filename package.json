@@ -1,0 +1,20 @@
+{
+  "name": "indexnow-submit",
+  "version": "1.0.0",
+  "description": "Submit a site's sitemap URLs to IndexNow from the CLI or a GitHub Action",
+  "type": "module",
+  "bin": {
+    "indexnow": "src/cli.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Daniel Varga",
+  "license": "MIT"
+}
